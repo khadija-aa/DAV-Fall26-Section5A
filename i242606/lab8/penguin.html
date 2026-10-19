@@ -1,0 +1,154 @@
+<!--// Step 1: Predict which penguin species has the highest body mass.
+
+// Step 2: Highlight the Gentoo bar in red and the other species bars in blue.
+
+// Step 3: Change the chart from body mass to flipper length to compare the species.
+
+// Step 4: Group penguins by island to compare their average body mass.
+
+// Step 5: Explain how bar height is calculated, how reversing the y-scale affects the chart, and how many rectangles represent the bars.-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lab 8 - Penguin Charts</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+    }
+
+    h2 { margin-top: 35px; }
+
+    svg {
+      display: block;
+      max-width: 100%;
+      margin-bottom: 30px;
+    }
+
+    .bar { fill: steelblue; }
+    .axis text { font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Penguin Data Analysis</h1>
+
+  <h2>Chart 1: Average Body Mass by Species</h2>
+  <svg id="chart1" width="750" height="430"></svg>
+
+  <h2>Chart 2: Number of Penguins by Island</h2>
+  <svg id="chart2" width="750" height="430"></svg>
+
+  <script>
+    const margin = { top: 30, right: 30, bottom: 70, left: 75 };
+    const width = 750 - margin.left - margin.right;
+    const height = 430 - margin.top - margin.bottom;
+
+    d3.csv("penguins.csv", d3.autoType).then(data => {
+      // Remove rows missing the fields needed for analysis.
+      const clean = data.filter(d =>
+        d.species && d.island &&
+        Number.isFinite(d.flipper_length_mm) &&
+        Number.isFinite(d.flipper_length_mm)
+      );
+
+      // TASK 1: Calculate average body mass for each species.
+      const speciesData = Array.from(
+        d3.rollup(
+          clean,
+          v => d3.mean(v, d => d.flipper_length_mm),
+          d => d.species
+        ),
+        ([species, value]) => ({ species, value })
+      );
+
+      const svg1 = d3.select("#chart1")
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+      const x1 = d3.scaleBand()
+        .domain(speciesData.map(d => d.species))
+        .range([0, width])
+        .padding(0.3);
+
+      const y1 = d3.scaleLinear()
+        .domain([0, d3.max(speciesData, d => d.value)])
+        .nice()
+        .range([height, 0]);
+
+      svg1.append("g")
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(x1));
+
+      svg1.append("g").call(d3.axisLeft(y1));
+
+      svg1.selectAll("rect")
+        .data(speciesData)
+        .join("rect")
+        .attr("x", d => x1(d.species))
+        .attr("y", d => y1(d.value))
+        .attr("width", x1.bandwidth())
+        .attr("height", d => height - y1(d.value))
+        .attr("fill", d =>
+          d.species === "Gentoo" ? "red" : "steelblue"
+        );
+
+      svg1.append("text")
+        .attr("x", width / 2)
+        .attr("y", -8)
+        .attr("text-anchor", "middle")
+        .text("Average Body Mass (g)");
+
+      // TASK 2: Count penguins for each island.
+      const islandData = Array.from(
+        d3.rollup(clean, v => v.length, d => d.island),
+        ([island, value]) => ({ island, value })
+      );
+
+      const svg2 = d3.select("#chart2")
+        .append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+      const x2 = d3.scaleBand()
+        .domain(islandData.map(d => d.island))
+        .range([0, width])
+        .padding(0.3);
+
+      const y2 = d3.scaleLinear()
+        .domain([0, d3.max(islandData, d => d.value)])
+        .nice()
+        .range([height, 0]);
+
+      svg2.append("g")
+        .attr("transform", `translate(0,${height})`)
+        .call(d3.axisBottom(x2));
+
+      svg2.append("g").call(d3.axisLeft(y2));
+
+      svg2.selectAll("rect")
+        .data(islandData)
+        .join("rect")
+        .attr("x", d => x2(d.island))
+        .attr("y", d => y2(d.value))
+        .attr("width", x2.bandwidth())
+        .attr("height", d => height - y2(d.value))
+        .attr("class", "bar");
+
+      svg2.append("text")
+        .attr("x", width / 2)
+        .attr("y", -8)
+        .attr("text-anchor", "middle")
+        .text("Number of Penguins");
+    }).catch(error => {
+      console.error("Could not load penguin dataset:", error);
+    });
+  </script>
+</body>
+</html>
+
+<!--Q1:The .attr("height", ...) line calculates the height of each bar using the y-scale
+//Q2:The y-axis scale is reversed, so larger values map toward the bottom instead of the top.
+//Q3: Each chart has three <rect> elements because each bar is represented by one rectangle.-->
